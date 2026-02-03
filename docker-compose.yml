@@ -1,0 +1,70 @@
+services:
+  al3sal_db:
+    image: postgres:15.7-alpine
+    container_name: al3sal_db_container
+    restart: unless-stopped
+    volumes:
+      - al3sal_postgres_data:/var/lib/postgresql/data/
+    env_file:
+      - .env
+    networks:
+      - al3sal-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  al3sal_app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: al3sal_app_container
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8000:8000"
+    env_file:
+      - .env
+    depends_on:
+      al3sal_db:
+        condition: service_healthy
+    networks:
+      - al3sal-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+  al3sal_bridge:
+    build:
+      context: ./bridge
+      dockerfile: Dockerfile
+    container_name: al3sal_bridge_container
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3000:3000"
+    volumes:
+      - ./.wwebjs_auth:/usr/src/app/.wwebjs_auth
+    env_file:
+      - .env
+    environment:
+      - BOT_WEBHOOK_URL=http://al3sal_app:8000/webhook
+      - BOT_RESUME_URL=http://al3sal_app:8000/internal/resume
+      - BOT_PAUSE_URL=http://al3sal_app:8000/internal/pause
+    networks:
+      - al3sal-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+volumes:
+  al3sal_postgres_data:
+
+networks:
+  al3sal-network:
+    name: al3sal_bot_network

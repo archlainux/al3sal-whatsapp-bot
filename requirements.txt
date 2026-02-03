@@ -1,0 +1,13 @@
+aiohttp
+asyncpg
+fastapi
+google-auth-oauthlib
+gspread
+langdetect
+openai
+pydantic
+pydantic-settings
+python-dotenv
+structlog
+tenacity
+uvicorn[standard]
