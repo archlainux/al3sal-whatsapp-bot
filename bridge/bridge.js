@@ -80,7 +80,24 @@ async function forwardMessageWithRetries(payload) {
 }
 
 client.on('message', async msg => {
+    if (msg.isStatus || msg.from === 'status@broadcast') {
+        return;
+    }
+
     if (msg.body && !msg.fromMe) {
+        if (msg.hasQuotedMsg) {
+            try {
+                const quotedMsg = await msg.getQuotedMessage();
+                
+                if (quotedMsg && quotedMsg.isStatus) {
+                    logger.info({ from: msg.from }, 'Ignored status reply');
+                    return; 
+                }
+            } catch (error) {
+                logger.error('Error fetching quoted message', error);
+            }
+        }
+
         logger.info({ from: msg.from, body: msg.body }, 'Received message');
         const payload = {
             from_number: msg.from.split('@')[0],
